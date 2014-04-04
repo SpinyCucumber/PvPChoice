@@ -1,0 +1,31 @@
+name: PVPChoice
+main: com.spiny.pvpchoice.PVPChoice
+version: 1.3
+commands:
+  pvp:
+    description: Toggles your ability to PVP.
+    usage: /pvp <player>
+    permission-message: You don't have permission to use this command.
+permissions:
+  pvpchoice.toggle.*:
+    description: Parent node, both .on and .off are children
+    default: true
+    children:
+      pvpchoice.toggle.on: true
+      pvpchoice.toggle.off: true
+  pvpchoice.toggle.on:
+    description: Allows the player to toggle PvP on
+  pvpchoice.toggle.off:
+    description: Allows the player to toggle PvP off
+  pvpchoice.toggle.other.*:
+    description: Parent node, both .on.other and .off.other are children
+    default: op
+    children:
+      pvpchoice.toggle.on.other: true
+      pvpchoice.toggle.off.other: true
+  pvpchoice.toggle.on.other:
+    description: Allows a player to toggle another player's PvP on
+  pvpchoice.toggle.off.other:
+    description: Allows a player to toggle another player's PvP off
+  pvpchoice.cooldown.bypass:
+    description: Allows a player to disable PvP anytime
