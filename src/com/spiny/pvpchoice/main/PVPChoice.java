@@ -45,6 +45,7 @@ public class PVPChoice extends JavaPlugin implements Listener {
 		BasicListener.newListener(PVPListenerHandler.class, this);
 		BasicListener.newListener(DropListenerHandler.class, this);
 		PVPChoiceAPI.setPlugin(this);
+		PlayerUtil.setServer(this.getServer());
 		handler = new DefaultHandler();
 	}
 	
