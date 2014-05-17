@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
@@ -22,16 +21,23 @@ public class DropListenerHandler extends BasicListener<PVPChoice> {
 		PlayerData d = plugin.data(p);
 		List<ItemStack> drops = event.getDrops();
 		if(!d.pvpEnabled) plugin.getHandler().tagItems(drops, p);
-		else {
-			if(p.getKiller() != null) plugin.getHandler().tagItems(drops, p, p.getKiller());
-		}
+		else if(p.getKiller() != null) plugin.getHandler().tagItems(drops, p, p.getKiller());
 	}
 	
-	@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler
 	public void onPlayerPickupItem(PlayerPickupItemEvent event) {
+		if(plugin.getHandler().isNonOwner(event.getItem(), event.getPlayer())) {
+			event.setCancelled(true);
+			return;
+		}
 		GetTaggedOwnersEvent owners = plugin.getHandler().getOwners(event.getItem().getItemStack());
 		if(owners == null) return;
-		if(!owners.isOwner(event.getPlayer())) event.setCancelled(true);
-		else owners.cleanItem();
+		if(!owners.isOwner(event.getPlayer().getUniqueId().toString())) {
+			plugin.getHandler().setNonOwner(event.getItem(), event.getPlayer());
+			event.setCancelled(true);
+			return;
+		}
+		plugin.getHandler().cleanItem(owners);
 	}
+	
 }

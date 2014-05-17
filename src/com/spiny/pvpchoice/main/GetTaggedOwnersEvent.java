@@ -2,9 +2,7 @@ package com.spiny.pvpchoice.main;
 
 import java.util.List;
 
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public class GetTaggedOwnersEvent {
 	
@@ -12,16 +10,8 @@ public class GetTaggedOwnersEvent {
 	private List<String> dirtyLore;
 	private ItemStack item;
 	
-	public boolean isOwner(Player player) {
-		return(players.contains(player.getName()));
-	}
-	
-	public void cleanItem() {
-		ItemMeta m = item.getItemMeta();
-		List<String> lore = m.getLore();
-		lore.removeAll(dirtyLore);
-		m.setLore(lore);
-		item.setItemMeta(m);
+	public boolean isOwner(String name) {
+		return(players.contains(name));
 	}
 	
 	public GetTaggedOwnersEvent(List<String> players, List<String> dirtyLore, ItemStack item) {
@@ -29,4 +19,13 @@ public class GetTaggedOwnersEvent {
 		this.dirtyLore = dirtyLore;
 		this.item = item;
 	}
+
+	public List<String> getDirtyLore() {
+		return dirtyLore;
+	}
+
+	public ItemStack getItem() {
+		return item;
+	}
+	
 }

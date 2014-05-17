@@ -4,17 +4,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -106,19 +110,17 @@ public class PVPChoice extends JavaPlugin implements Listener {
 		return data.get(p);
 	}
 	
-	private static String toInvisible(String s) {
-        String hidden = "";
-        for (char c : s.toCharArray()) hidden += ChatColor.COLOR_CHAR+""+c;
-        return hidden;
-    }
-	
 	public interface PVPChoiceHandler {
 
 		void tagItems(List<ItemStack> items, Player... owners);
+		void cleanItem(GetTaggedOwnersEvent e);
+		void setNonOwner(Item item, Player player);
+		boolean isNonOwner(Item item, Player player);
 		GetTaggedOwnersEvent getOwners(ItemStack item);
 		
 		boolean inquireCancel(Player damaged, Player damager);
 		void handleDeath(Player deceased);
+		
 	}
 	
 	public class DefaultHandler implements PVPChoiceHandler {
@@ -128,11 +130,15 @@ public class PVPChoice extends JavaPlugin implements Listener {
 			List<String> players = new ArrayList<String>();
 			List<String> dirtyLore = new ArrayList<String>();
 		    for(String line : item.getItemMeta().getLore()) {
-			   OfflinePlayer p = PlayerUtil.getPlayerFromName(unInvisify(line));
-			   if(p != null) {
-				   players.add(p.getName());
-				   dirtyLore.add(line);
-			   }
+		    	try {
+		    		OfflinePlayer p = Bukkit.getOfflinePlayer(UUID.fromString(unInvisify(line)));
+		    		if(p != null) {
+						players.add(p.getUniqueId().toString());
+						dirtyLore.add(line);
+					}
+		    	} catch(IllegalArgumentException e) {
+		    		continue;
+		    	}
 		    }
 		    if(players.size() == 0) return null;
 		    return new GetTaggedOwnersEvent(players, dirtyLore, item);
@@ -153,15 +159,39 @@ public class PVPChoice extends JavaPlugin implements Listener {
 				List<String> lore = m.getLore();
 				if(lore == null) lore = new ArrayList<String>();
 				for(Player p : players) {
-					lore.add(toInvisible(p.getName()));
+					lore.add(toInvisible(p.getUniqueId().toString()));
 				}
 				m.setLore(lore);
 				item.setItemMeta(m);
 			}
 		}
+
+		public void setNonOwner(Item item, Player player) {
+			item.setMetadata(player.getUniqueId().toString(), new FixedMetadataValue(PVPChoice.this, null));
+		}
+
+		public boolean isNonOwner(Item item, Player player) {
+			return item.hasMetadata(player.getUniqueId().toString());
+		}
+
+		public void cleanItem(GetTaggedOwnersEvent e) {
+			ItemMeta m = e.getItem().getItemMeta();
+			List<String> lore = m.getLore();
+			lore.removeAll(e.getDirtyLore());
+			m.setLore(lore);
+			e.getItem().setItemMeta(m);
+		}
+		
 	}
 	
 	private static String unInvisify(String line) {
 		return line.replaceAll("§", "");
 	}
+	
+	private static String toInvisible(String s) {
+        String hidden = "";
+        for (char c : s.toCharArray()) hidden += ChatColor.COLOR_CHAR+""+c;
+        return hidden;
+    }
+	
 }
