@@ -19,12 +19,12 @@ public class BasicListener<T extends Plugin> implements Listener {
 		p.getServer().getPluginManager().registerEvents(this, p);
 		plugin = p;
 	}
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static void newListener(Class<? extends BasicListener> clazz, Plugin... ps) {
+
+	@SafeVarargs
+	public static <T extends Plugin> void newListener(Class<? extends BasicListener<T>> clazz, T... ps) {
 		try {
-			BasicListener l = clazz.newInstance();
-			for(Plugin p : ps) l.listen(p);
+			BasicListener<T> l = clazz.newInstance();
+			for(T p : ps) l.listen(p);
 		} catch (InstantiationException | IllegalAccessException e) {
 			e.printStackTrace();
 		}

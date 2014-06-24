@@ -20,8 +20,14 @@ public class DropListenerHandler extends BasicListener<PVPChoice> {
 		Player p = (Player) event.getEntity();
 		PlayerData d = plugin.data(p);
 		List<ItemStack> drops = event.getDrops();
-		if(!d.pvpEnabled) plugin.getHandler().tagItems(drops, p);
-		else if(p.getKiller() != null) plugin.getHandler().tagItems(drops, p, p.getKiller());
+		if(!d.pvpEnabled) tagItems(drops, p);
+		else if(p.getKiller() != null) tagItems(drops, p, p.getKiller());
+	}
+	
+	private void tagItems(List<ItemStack> drops, Player...players) {
+		for(ItemStack item : drops) {
+			plugin.getHandler().tagItem(item, players);
+		}
 	}
 	
 	@EventHandler

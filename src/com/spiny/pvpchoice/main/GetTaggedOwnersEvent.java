@@ -19,7 +19,11 @@ public class GetTaggedOwnersEvent {
 		this.dirtyLore = dirtyLore;
 		this.item = item;
 	}
-
+	
+	public List<String> getPlayers() {
+		return players;
+	}
+	
 	public List<String> getDirtyLore() {
 		return dirtyLore;
 	}

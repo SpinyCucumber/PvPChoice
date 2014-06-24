@@ -5,17 +5,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -27,15 +26,55 @@ import com.spiny.pvpchoice.listeners.DropListenerHandler;
 import com.spiny.pvpchoice.listeners.PVPListenerHandler;
 import com.spiny.util.PlayerUtil;
 
-public class PVPChoice extends JavaPlugin implements Listener {
+public class PVPChoice extends JavaPlugin {
 	
 	private Map<Player, PlayerData> data = new HashMap<Player, PlayerData>();
 	private PVPChoiceHandler handler;
 	
+	private static PlayerData defaultData;
+	private static final String DEF_DATA_PATH = "defaultmode";
+	
+	private static final boolean DEBUG = true;
+	
+	private static PVPChoice recentInstance;
+	private static String pluginName;
+	
+	private void updateInstance() {
+		recentInstance = this;
+		pluginName = this.getName();
+	}
+	
+	private void printDebug(String debug) {
+		if(!DEBUG) return;
+		this.getLogger().log(Level.INFO, debug);
+	}
+	
+	public static void updateStaticInstance() {
+		recentInstance = (PVPChoice) Bukkit.getPluginManager().getPlugin(pluginName);
+	}
+	
+	public static void setPVPChoiceHandler(PVPChoiceHandler handler) {
+		recentInstance.handler = handler;
+	}
+	
+	public static void dropItems(Location l, Player p, ItemStack...items) {
+		for(ItemStack item : items) {
+			l.getWorld().dropItem(l, item);
+			recentInstance.getHandler().tagItem(item, p);
+		}
+	}
+	
+	public static void setPVPEnabled(Player player, boolean enabled) {
+		recentInstance.data(player).pvpEnabled = enabled;
+	}
+	
+	public static boolean getPVPEnabled(Player player) {
+		return recentInstance.data(player).pvpEnabled;
+	}
+	
 	public void onEnable() {
 		getDataFolder().mkdir();
 		saveDefaultConfig();
-		getServer().getPluginManager().registerEvents(this, this);
 		for(Player player : getServer().getOnlinePlayers()) {
 			data.put(player, new PlayerData(getConfig().getBoolean("defaultmode")));
 		}
@@ -48,22 +87,14 @@ public class PVPChoice extends JavaPlugin implements Listener {
 		}.runTaskTimer(this, 20, 20);
 		BasicListener.newListener(PVPListenerHandler.class, this);
 		BasicListener.newListener(DropListenerHandler.class, this);
-		PVPChoiceAPI.setPlugin(this);
+		this.updateInstance();
+		defaultData = new PlayerData(this.getConfig().getBoolean(DEF_DATA_PATH));
 		PlayerUtil.setServer(this.getServer());
 		handler = new DefaultHandler();
 	}
 	
 	public PVPChoiceHandler getHandler() {
 		return handler;
-	}
-	
-	public void setHandler(PVPChoiceHandler handler) {
-		this.handler = handler;
-	}
-	
-	@EventHandler
-	public void onJoin(PlayerJoinEvent event) {
-		data.put(event.getPlayer(), new PlayerData(getConfig().getBoolean("defaultmode")));
 	}
 	
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -107,23 +138,15 @@ public class PVPChoice extends JavaPlugin implements Listener {
 	}
 	
 	public PlayerData data(Player p) {
-		return data.get(p);
+		PlayerData d = data.get(p);
+		if(d == null) {
+			d = defaultData.clone();
+			data.put(p, d);
+		}
+		return d;
 	}
 	
-	public interface PVPChoiceHandler {
-
-		void tagItems(List<ItemStack> items, Player... owners);
-		void cleanItem(GetTaggedOwnersEvent e);
-		void setNonOwner(Item item, Player player);
-		boolean isNonOwner(Item item, Player player);
-		GetTaggedOwnersEvent getOwners(ItemStack item);
-		
-		boolean inquireCancel(Player damaged, Player damager);
-		void handleDeath(Player deceased);
-		
-	}
-	
-	public class DefaultHandler implements PVPChoiceHandler {
+	private class DefaultHandler implements PVPChoiceHandler {
 
 		public GetTaggedOwnersEvent getOwners(ItemStack item) {
 			if(!item.getItemMeta().hasLore()) return null;
@@ -132,10 +155,9 @@ public class PVPChoice extends JavaPlugin implements Listener {
 		    for(String line : item.getItemMeta().getLore()) {
 		    	try {
 		    		OfflinePlayer p = Bukkit.getOfflinePlayer(UUID.fromString(unInvisify(line)));
-		    		if(p != null) {
-						players.add(p.getUniqueId().toString());
-						dirtyLore.add(line);
-					}
+		    		if(p == null) continue;
+					players.add(p.getUniqueId().toString());
+					dirtyLore.add(line);
 		    	} catch(IllegalArgumentException e) {
 		    		continue;
 		    	}
@@ -153,17 +175,15 @@ public class PVPChoice extends JavaPlugin implements Listener {
 			return !(data(damaged).pvpEnabled) || !(data(damager).pvpEnabled);
 		}
 
-		public void tagItems(List<ItemStack> items, Player... players) {
-			for(ItemStack item : items) {
-				ItemMeta m = item.getItemMeta();
-				List<String> lore = m.getLore();
-				if(lore == null) lore = new ArrayList<String>();
-				for(Player p : players) {
-					lore.add(toInvisible(p.getUniqueId().toString()));
-				}
-				m.setLore(lore);
-				item.setItemMeta(m);
+		public void tagItem(ItemStack item, Player... players) {
+			ItemMeta m = item.getItemMeta();
+			List<String> lore = m.getLore();
+			if(lore == null) lore = new ArrayList<String>();
+			for(Player p : players) {
+				lore.add(toInvisible(p.getUniqueId().toString()));
 			}
+			m.setLore(lore);
+			item.setItemMeta(m);
 		}
 
 		public void setNonOwner(Item item, Player player) {
@@ -175,6 +195,9 @@ public class PVPChoice extends JavaPlugin implements Listener {
 		}
 
 		public void cleanItem(GetTaggedOwnersEvent e) {
+			for(String p : e.getPlayers()) {
+				PVPChoice.this.printDebug("Cleaning item for " + p);
+			}
 			ItemMeta m = e.getItem().getItemMeta();
 			List<String> lore = m.getLore();
 			lore.removeAll(e.getDirtyLore());

@@ -1,6 +1,6 @@
 name: PVPChoice
 main: com.spiny.pvpchoice.main.PVPChoice
-version: 1.9
+version: 1.9.2
 commands:
   pvp:
     description: Toggles your ability to PVP.
