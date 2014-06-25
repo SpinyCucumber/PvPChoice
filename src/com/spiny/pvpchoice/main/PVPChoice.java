@@ -59,8 +59,8 @@ public class PVPChoice extends JavaPlugin {
 	
 	public static void dropItems(Location l, Player p, ItemStack...items) {
 		for(ItemStack item : items) {
-			l.getWorld().dropItem(l, item);
 			recentInstance.getHandler().tagItem(item, p);
+			l.getWorld().dropItem(l, item);
 		}
 	}
 	
@@ -208,7 +208,7 @@ public class PVPChoice extends JavaPlugin {
 	}
 	
 	private static String unInvisify(String line) {
-		return line.replaceAll("§", "");
+		return line.replaceAll("ï¿½", "");
 	}
 	
 	private static String toInvisible(String s) {
